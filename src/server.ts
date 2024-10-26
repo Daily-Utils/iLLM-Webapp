@@ -111,6 +111,17 @@ export const onFlowPublish = async (workflowId: string, state: boolean) => {
   return res;
 };
 
+export const onFileUpload = async (type: string, payload: any) => {
+  console.log(payload);
+  
+  const res = await axios.post(`${serverURL}/upload/pdfs`, payload,{
+    headers:{
+      'Content-Type': 'multipart/form-data',
+    }
+  });
+  return res;
+};
+
 export const onGetWorkflows = async (clerkId: string) => {
   const res = await axios.get(`${serverURL}/workflows/get-flows/${clerkId}`);
   return res;

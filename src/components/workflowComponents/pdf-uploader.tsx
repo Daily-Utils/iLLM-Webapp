@@ -1,15 +1,18 @@
 import React, { useCallback, useState, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { AlertCircle, FileCheck, Trash2, Upload } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Button } from "../ui/button";
+// import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+// import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
+import { onFileUpload } from "../../server";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB in bytes
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; 
 
 export default function DragDropPDFUploader() {
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback((newFiles: File[]) => {
@@ -49,7 +52,8 @@ export default function DragDropPDFUploader() {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
-  const handleReset = () => {
+  const handleReset = (e: React.MouseEvent) => {
+    e.preventDefault();
     setFiles([]);
     setError(null);
     if (fileInputRef.current) {
@@ -57,7 +61,8 @@ export default function DragDropPDFUploader() {
     }
   };
 
-  const handleSelectFiles = () => {
+  const handleSelectFiles = (e: React.MouseEvent) => {
+    e.preventDefault();
     fileInputRef.current?.click();
   };
 
@@ -69,9 +74,37 @@ export default function DragDropPDFUploader() {
     }
   };
 
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (files.length === 0) {
+      setError("Please select at least one PDF file to upload.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      console.log("Files to upload:", files);
+      const formData = new FormData();
+      files.forEach((file) => formData.append('pdfs', file));
+      console.log("form",formData);
+      
+      const response = await onFileUpload("pdf",formData);
+      console.log("response::>",response);
+      
+
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <ScrollArea className="h-[60vh]">
-      <div className="w-full max-w-md mx-auto space-y-6 p-4">
+      <form onSubmit={onSubmit} className="w-full max-w-md mx-auto space-y-6 p-4" encType="multipart/form-data" >
         <div
           {...getRootProps()}
           className={`p-8 border-2 border-dashed rounded-lg text-center transition-colors ${
@@ -83,7 +116,7 @@ export default function DragDropPDFUploader() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileInputChange}
-            accept=".pdf"
+            accept="application/pdf"
             multiple
             className="hidden"
           />
@@ -94,14 +127,13 @@ export default function DragDropPDFUploader() {
           <p className="text-xs text-gray-500 mt-1">
             (Only PDF files up to 20MB each are accepted)
           </p>
-          <Button
+          <button
             onClick={handleSelectFiles}
             type="button"
-            variant="outline"
-            className="mt-4"
+            className="mt-4 px-4 py-2 border rounded-md hover:bg-gray-100 transition-colors"
           >
             Select Files
-          </Button>
+          </button>
         </div>
 
         {files.length > 0 && (
@@ -120,14 +152,14 @@ export default function DragDropPDFUploader() {
                   <span className="text-sm text-gray-500">
                     {(file.size / (1024 * 1024)).toFixed(2)} MB
                   </span>
-                  <Button
-                    variant="destructive"
-                    size="icon"
+                  <button
+                    type="button"
                     onClick={() => handleDelete(index)}
+                    className="p-2 text-red-500 hover:bg-red-100 rounded-full transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete</span>
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}
@@ -135,25 +167,38 @@ export default function DragDropPDFUploader() {
         )}
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="rounded-md bg-red-50 p-4 border border-red-200">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <div className="text-sm text-red-700">{error}</div>
+              </div>
+            </div>
+          </div>
         )}
 
         {(files.length > 0 || error) && (
-          <>
-            <Button onClick={handleReset} variant="destructive" className="w-full">
+          <div className="space-y-4">
+            <button
+              onClick={handleReset}
+              type="button"
+              className="w-full px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+            >
               Reset
-            </Button>
+            </button>
 
-            <Button variant="default" className="w-full">
-              Upload
-            </Button>
-          </>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full px-4 py-2 bg-blue-500 text-white rounded-md transition-colors
+                ${isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'hover:bg-blue-600'}`}
+            >
+              {isSubmitting ? 'Uploading...' : 'Upload'}
+            </button>
+          </div>
         )}
-      </div>
+      </form>
     </ScrollArea>
   );
 }
