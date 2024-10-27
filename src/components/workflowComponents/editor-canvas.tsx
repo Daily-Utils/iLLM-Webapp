@@ -249,8 +249,8 @@ const EditorCanvas = () => {
     <ResizableHandle />
     <ResizablePanel
       defaultSize={40}
-      maxSize={40}
-      minSize={10}
+      maxSize={60}
+      minSize={40}
       className="relative sm:block"
     >
       {isWorkFlowLoading ? (
